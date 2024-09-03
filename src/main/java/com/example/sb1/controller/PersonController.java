@@ -1,68 +1,66 @@
 package com.example.sb1.controller;
- 
 import java.util.List;
-import java.util.Optional;
  
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.example.sb1.entity.Person;
-import com.example.sb1.repository.PersonRepository;
+import com.example.sb1.service.PersonService;
  
+@RequestMapping("/person")
 @RestController
-@RequestMapping("/persons")
 public class PersonController {
  
-    @Autowired
-    private PersonRepository personRepository;
+    private PersonService personService;
  
-    // GET all persons
+    public PersonController(PersonService personService) {
+        this.personService = personService;
+    }
+ 
     @GetMapping
-    public List<Person> getAllPersons() {
-        return personRepository.findAll();
+    public ResponseEntity<List<Person>> getAllPersons() {
+        List<Person> persons = personService.getAllPersons();
+        return new ResponseEntity<>(persons, HttpStatus.OK);
     }
  
-    // GET person by ID
+    @PostMapping
+    public ResponseEntity<Person> createPerson(@RequestBody Person person) {
+        Person createdPerson = personService.createPerson(person);
+        return new ResponseEntity<>(createdPerson, HttpStatus.CREATED);
+    }
+ 
     @GetMapping("/{id}")
-    public ResponseEntity<Person> getPersonById(@PathVariable Long id) {
-        Optional<Person> person = personRepository.findById(id);
-        return person.map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(null));
+    public ResponseEntity<Person> getPersonById(@PathVariable int id) {
+        Person person = personService.getPersonById(id);
+        if (id <= 0) {
+            throw new IllegalArgumentException("ID must be a positive integer.");
+        }
+        return new ResponseEntity<>(person, person != null ? HttpStatus.OK : HttpStatus.NOT_FOUND);
     }
  
-    // POST to create a new person
-    @PostMapping("/{id}/{name}/{email}")
-    public void addData(
-        @PathVariable int id,
-        @PathVariable String name,
-        @PathVariable String email){
-            personRepository.addData(id, name, email);  
-        }
-   
- 
-    // PUT to update an existing person
     @PutMapping("/{id}")
-    public ResponseEntity<Person> updatePerson(@PathVariable Long id, @RequestBody Person updatedPerson) {
-        return personRepository.findById(id)
-                .map(person -> {
-                    // Update the fields as necessary
-                    Person savedPerson = personRepository.save(new Person(id, updatedPerson.name(), updatedPerson.email()));
-                    return ResponseEntity.ok(savedPerson);
-                })
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(null));
+    public ResponseEntity<Person> updatePerson(@PathVariable int id, @RequestBody Person updatedPerson) {
+        Person person = personService.updatePerson(id, updatedPerson);
+        if (person == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        return new ResponseEntity<>(person, HttpStatus.OK);
     }
  
-    // DELETE to remove a person by ID
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletePerson(@PathVariable Long id) {
-        try {
-            personRepository.deleteById(id);
-            return ResponseEntity.noContent().build();
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    public ResponseEntity<Void> deletePerson(@PathVariable("id") int id) {
+        if (personService.getPersonById(id) == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
+        personService.deletePerson(id);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }
- 

@@ -1,4 +1,4 @@
-package com.kgisl.sb101.config;
+package com.example.sb1.config;
 
 import java.util.Arrays;
 
